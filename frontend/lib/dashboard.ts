@@ -10,6 +10,14 @@ export interface DashboardResponse {
   ex_situ_coverage: {
     threatened_species_total: number;
     threatened_species_with_captive_population: number;
+    /**
+     * Gate 15 Q1 — funder-facing "captive coverage" metric. Threatened
+     * species with ≥1 ExSituPopulation in `breeding_status='breeding'`.
+     * Optional on the type so older deployed backends without the new
+     * field don't break rendering; the UI falls back to the legacy
+     * `threatened_species_with_captive_population` when missing.
+     */
+    threatened_species_with_breeding_population?: number;
     threatened_species_without_captive_population: number;
     institutions_active: number;
     total_populations_tracked: number;
@@ -39,6 +47,15 @@ export interface DashboardResponse {
   contributors?: {
     active_institutions_total: number;
     by_type: Record<string, number>;
+    /**
+     * Gate 15 Q1 split — equal-weight buckets. `institutional_contributors_total`
+     * is the non-keeper count (zoos / aquariums / research orgs / hobbyist
+     * programs / NGOs / government). `verified_keeper_network_total` is
+     * the hobbyist_keeper count. Optional on the type so older backends
+     * still render; the UI falls back to deriving from `by_type` if missing.
+     */
+    institutional_contributors_total?: number;
+    verified_keeper_network_total?: number;
     countries_represented: number;
     activity_window_days: number;
     breeding_events_recent: number;

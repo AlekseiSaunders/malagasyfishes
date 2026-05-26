@@ -415,15 +415,39 @@ export default async function DashboardPage() {
               padding: 0,
             }}
           >
-            <li>
-              <StatTile
-                label={t("contributors.activeInstitutions")}
-                value={contributors.active_institutions_total}
-                sublabel={t("contributors.activeInstitutionsSublabel", {
-                  countries: contributors.countries_represented,
-                })}
-              />
-            </li>
+            {/* Gate 15 Q1 lock — split the single "active institutions"
+                tile into two equal-weight tiles. Falls back to the legacy
+                single tile if the backend hasn't shipped the split fields
+                yet (defensive across deploy windows). */}
+            {contributors.institutional_contributors_total !== undefined &&
+            contributors.verified_keeper_network_total !== undefined ? (
+              <>
+                <li>
+                  <StatTile
+                    label={t("contributors.institutionalContributors")}
+                    value={contributors.institutional_contributors_total}
+                    sublabel={t("contributors.institutionalContributorsSublabel")}
+                  />
+                </li>
+                <li>
+                  <StatTile
+                    label={t("contributors.verifiedKeeperNetwork")}
+                    value={contributors.verified_keeper_network_total}
+                    sublabel={t("contributors.verifiedKeeperNetworkSublabel")}
+                  />
+                </li>
+              </>
+            ) : (
+              <li>
+                <StatTile
+                  label={t("contributors.activeInstitutions")}
+                  value={contributors.active_institutions_total}
+                  sublabel={t("contributors.activeInstitutionsSublabel", {
+                    countries: contributors.countries_represented,
+                  })}
+                />
+              </li>
+            )}
             <li>
               <StatTile
                 label={t("contributors.recentEdits", {

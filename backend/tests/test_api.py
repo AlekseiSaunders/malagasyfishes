@@ -753,6 +753,9 @@ class TestDashboard:
         # Contributors block — present and zero on a fresh DB.
         contrib = data["contributors"]
         assert contrib["active_institutions_total"] == 0
+        # Gate 15 Q1 split — both new fields present and zero on a fresh DB.
+        assert contrib["institutional_contributors_total"] == 0
+        assert contrib["verified_keeper_network_total"] == 0
         assert contrib["countries_represented"] == 0
         assert contrib["activity_window_days"] == 30
         assert contrib["breeding_events_recent"] == 0
@@ -768,6 +771,8 @@ class TestDashboard:
             "ngo",
             "government",
         }
+        # Gate 15 Q1 — breeding-population captive coverage metric present.
+        assert data["ex_situ_coverage"]["threatened_species_with_breeding_population"] == 0
 
     def test_coordination_block_counts_active_programs_and_transfers(
         self,
@@ -903,6 +908,89 @@ class TestDashboard:
         assert contrib["breeding_events_recent"] == 1  # 60-day event outside window
         assert contrib["populations_edited_recent"] == 1
         assert contrib["populations_recent_census"] == 1  # only pop_zoo censused recently
+        # Gate 15 Q1 split — both institutions are institutional (zoo + CARES
+        # program), no individual keepers in this fixture.
+        assert contrib["institutional_contributors_total"] == 2
+        assert contrib["verified_keeper_network_total"] == 0
+
+    def test_q1_split_separates_keepers_from_institutions(
+        self, api_client: APIClient, species_cr: Species
+    ) -> None:
+        """Gate 15 Q1 lock: the public dashboard renders institutional
+        contributors and verified keepers as separate, equal-weight tiles.
+
+        Verifies that hobbyist_keeper rows count toward the keeper-network
+        tile and NOT toward the institutional-contributors tile, and that
+        sum-of-both equals the legacy active_institutions_total.
+        """
+        from populations.models import ExSituPopulation, Institution
+
+        zoo = Institution.objects.create(name="ABQ BioPark", institution_type="zoo", country="US")
+        keeper_a = Institution.objects.create(
+            name="J. Smith (keeper)",
+            institution_type="hobbyist_keeper",
+            country="US",
+        )
+        keeper_b = Institution.objects.create(
+            name="A. Jones (keeper)",
+            institution_type="hobbyist_keeper",
+            country="GB",
+        )
+
+        ExSituPopulation.objects.create(species=species_cr, institution=zoo, count_total=10)
+        ExSituPopulation.objects.create(species=species_cr, institution=keeper_a, count_total=6)
+        ExSituPopulation.objects.create(species=species_cr, institution=keeper_b, count_total=4)
+
+        from django.core.cache import cache
+
+        cache.delete("api:dashboard:v3")
+
+        contrib = api_client.get("/api/v1/dashboard/").json()["contributors"]
+        assert contrib["active_institutions_total"] == 3
+        assert contrib["institutional_contributors_total"] == 1  # zoo only
+        assert contrib["verified_keeper_network_total"] == 2  # keeper_a + keeper_b
+        # Sanity: split sums to the legacy total.
+        assert (
+            contrib["institutional_contributors_total"] + contrib["verified_keeper_network_total"]
+            == contrib["active_institutions_total"]
+        )
+
+    def test_q1_captive_coverage_filters_breeding(
+        self, api_client: APIClient, species_cr: Species, species_en: Species
+    ) -> None:
+        """Gate 15 Q1: captive coverage headline counts ONLY threatened
+        species with a breeding population, not holding-only ones.
+
+        species_cr has a breeding population → counted.
+        species_en has a non-breeding holding → counted toward legacy
+        `threatened_species_with_captive_population` but NOT toward the
+        new `threatened_species_with_breeding_population`.
+        """
+        from populations.models import ExSituPopulation, Institution
+
+        zoo = Institution.objects.create(name="Test Zoo", institution_type="zoo", country="US")
+        ExSituPopulation.objects.create(
+            species=species_cr,
+            institution=zoo,
+            count_total=10,
+            breeding_status="breeding",
+        )
+        ExSituPopulation.objects.create(
+            species=species_en,
+            institution=zoo,
+            count_total=2,
+            breeding_status="non-breeding",
+        )
+
+        from django.core.cache import cache
+
+        cache.delete("api:dashboard:v3")
+
+        coverage = api_client.get("/api/v1/dashboard/").json()["ex_situ_coverage"]
+        # Legacy metric: any holding counts.
+        assert coverage["threatened_species_with_captive_population"] == 2
+        # Q1 metric: only breeding counts.
+        assert coverage["threatened_species_with_breeding_population"] == 1
 
 
 # ============================================================

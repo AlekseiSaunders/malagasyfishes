@@ -74,11 +74,27 @@ class DashboardView(APIView):
             key = row["iucn_status"] or Species.IUCNStatus.NE
             iucn_counts[key] = iucn_counts.get(key, 0) + row["c"]
 
-        # Ex-situ coverage
+        # Ex-situ coverage. Two metrics now (Gate 15 Q1 lock):
+        # - `threatened_species_with_captive_population` — any holding,
+        #   including singletons and non-breeding. Preserved for back-compat
+        #   and as the "we know this species exists in captivity somewhere"
+        #   signal.
+        # - `threatened_species_with_breeding_population` — only species
+        #   with at least one ExSituPopulation row in `breeding` status.
+        #   This is the new funder-facing "captive coverage" headline that
+        #   the public dashboard surfaces; singletons and holding-only
+        #   populations stay visible elsewhere but don't dilute the
+        #   "this species is genuinely backed up" metric.
         threatened_total = Species.objects.filter(iucn_status__in=_THREATENED_STATUSES).count()
         threatened_with_captive = (
             Species.objects.filter(iucn_status__in=_THREATENED_STATUSES)
             .filter(ex_situ_populations__isnull=False)
+            .distinct()
+            .count()
+        )
+        threatened_with_breeding = (
+            Species.objects.filter(iucn_status__in=_THREATENED_STATUSES)
+            .filter(ex_situ_populations__breeding_status="breeding")
             .distinct()
             .count()
         )
@@ -168,6 +184,11 @@ class DashboardView(APIView):
             "ex_situ_coverage": {
                 "threatened_species_total": threatened_total,
                 "threatened_species_with_captive_population": threatened_with_captive,
+                # Gate 15 Q1 lock — funder-facing "captive coverage" headline.
+                # Counts threatened species that have at least one population
+                # in `breeding_status='breeding'`. Singletons and non-breeding
+                # holdings still appear in the legacy with_captive count above.
+                "threatened_species_with_breeding_population": threatened_with_breeding,
                 "threatened_species_without_captive_population": (
                     threatened_total - threatened_with_captive
                 ),
@@ -193,6 +214,26 @@ class DashboardView(APIView):
             },
             "contributors": {
                 "active_institutions_total": len(active_institution_ids),
+                # Gate 15 Q1 lock — split the contributors count into two
+                # equal-weight buckets so the public dashboard can render
+                # them as separate tiles without UI hierarchy implying that
+                # one cohort is more legitimate than the other:
+                # - institutional_contributors_total: zoos / aquariums /
+                #   research orgs / hobbyist *programs* (CARES, Citizen
+                #   Conservation as organizations) / NGOs / government.
+                # - verified_keeper_network_total: hobbyist_keeper rows
+                #   (individuals). At MVP-1 verification = admin-accepted
+                #   (since keeper institutions are only created via the
+                #   promote flow); MVP-2 tightens this to ≥2 accepted
+                #   submissions as a fast-follow.
+                "institutional_contributors_total": sum(
+                    count
+                    for it, count in institutions_by_type.items()
+                    if it != Institution.InstitutionType.HOBBYIST_KEEPER
+                ),
+                "verified_keeper_network_total": institutions_by_type.get(
+                    Institution.InstitutionType.HOBBYIST_KEEPER, 0
+                ),
                 "by_type": {
                     str(it): institutions_by_type.get(it, 0)
                     for it, _ in Institution.InstitutionType.choices
