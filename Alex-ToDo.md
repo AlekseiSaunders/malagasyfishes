@@ -31,7 +31,8 @@ distribution_narrative renders in FR via `Accept-Language: fr`).
 ## 🚨 Start here next
 
 The remaining pre-ABQ critical path is **§4.1 (demo dry-run) → §4.3
-(test-data hygiene audit).** Everything before §4 on the pre-workshop
+(test-data hygiene audit) → §6 (Gate 10 + Gate 15 contribute forms,
+shipping NOT-in-demo).** Everything before §4 on the pre-workshop
 list is now done or moved to Done. The dashboard at prod currently
 holds 8 institutions, 10 populations, 7 active programs (2 EEP + 5
 CARES), 4 threatened species with captive populations — enough story
@@ -42,6 +43,12 @@ to demo without empty panels.
 once before June 1; catching one demo bug now is worth more than
 anything else this week. Pair with me on it and we can fix anything
 that surfaces same-session.
+
+**§6 is the new pre-ABQ work.** Curated submission forms (husbandry
+tips + population entries), Tier 2 authenticated, queue-and-promote
+flow into the existing data model. Ship as quiet-launched artifacts;
+do not stage in the demo. See `docs/planning/specs/gate-15-population-submission-form.md`
+and `docs/planning/specs/gate-10-husbandry-contribute-form.md`.
 
 Optional ongoing items that don't block ABQ but you can do as data
 comes in: §2.4 (more CoordinatedProgram rows), §2.5 (Transfers as
@@ -697,6 +704,55 @@ Listing these so you know they're not on your plate.
   every merge, but when a seed PR lands you'll see it called out in
   the PR body.
 - **Writing tests**: I write the unit and integration tests.
+
+---
+
+## 6. Contribute flow — Gate 10 + Gate 15 (planning locked 2026-05-26)
+
+**Status:** Planning fully locked. Agent review pass complete (BA + architecture + security). All four open questions resolved with Aleksei 2026-05-26. Ready to implement on `gate/15-population-submission-form`.
+
+**Background:** New Tier 2 signups have been arriving with no contribute path
+beyond the mailto stub at `/contribute/husbandry`. Self-serve was considered
+and rejected 2026-05-26 (`docs/planning/specs/gate-14-hobbyist-self-serve-populations.md`
+captures the rejection rationale). Curated submission via admin queue is the
+alternative.
+
+**Two parallel gates, shared `submissions` Django app:**
+
+### 6.1 Gate 15 — Population submission form
+**Spec:** `docs/planning/specs/gate-15-population-submission-form.md`
+**What:** Authenticated Tier 2+ users submit captive population data (species
++ counts + breeding status + last census date + notes). Admin reviews in
+Django admin and one-click promotes to `ExSituPopulation`. First-accept
+auto-creates a `hobbyist_keeper` `Institution` for the submitter (admin
+controls naming); subsequent submissions auto-attach to the same institution.
+**Target merge:** 2026-05-30. **In demo:** No (quiet-launch).
+
+### 6.2 Gate 10 — Husbandry submission form (reopened)
+**Spec:** `docs/planning/specs/gate-10-husbandry-contribute-form.md`
+**What:** Originally deferred 2026-04-19 as an anonymous public form. Reopened
+2026-05-26 with auth posture flipped to Tier 2+ only (no anonymous). Shares
+infrastructure with Gate 15. Submissions land in `HusbandryContribution`;
+admin promotes by editing the relevant `SpeciesHusbandry` record.
+**Target merge:** 2026-05-30 (parallel with Gate 15). **In demo:** No.
+
+### 6.3 Post-ABQ follow-ups (queued)
+**Spec:** `docs/planning/specs/post-abq-contribute-followups.md`
+Three pieces of work explicitly out of scope for the pre-ABQ push:
+1. **Name discipline at signup** — split `User.name` into first/last with
+   validation + disclaimer. Stops "FishKing"-style signups.
+2. **Admin moderation polish** — unified "Pending Review" landing page,
+   inline previews, bulk actions, saved-search filters.
+3. **Quarterly submitter update emails** — generative "anything changed?"
+   digest with one-click "no change" affordance, auto-archive at 12 months
+   no activity, user-controlled cadence (every 3 / 6 / 12 months, or off).
+
+**Order:** name discipline first (small migration, immediate value, prevents
+recurrence), admin polish second (informed by real-usage friction), quarterly
+emails third (needs accumulated submitters to be worth automating).
+
+**If pre-ABQ time is left over:** name discipline is the only item suitable
+for last-minute work. The other two need real usage data to scope correctly.
 
 ---
 

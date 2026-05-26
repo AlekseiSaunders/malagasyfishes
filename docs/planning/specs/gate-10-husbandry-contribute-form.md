@@ -1,32 +1,59 @@
 ---
 gate: 10
 title: Husbandry Contribute — Django-backed Contact Form
-status: Deferred to post-MVP (2026-04-19)
+status: Reopened 2026-05-26 — auth posture changed (Tier 2+ only, no anonymous); shipping in parallel with Gate 15
 deferral_rationale: docs/planning/business-analysis/gate-10-contribute-form-assessment-2026-04-19.md
+reopen_rationale: 2026-05-26 — real Tier 2 signups arrived without a contribute path; Gate 14 (self-serve) rejected as too risky pre-ABQ; this curated submission flow is the alternative. Anonymous submission dropped in favor of authenticated Tier 2+ only.
 preconditions:
   - Gate 08 merged (species API contract; same Django app infrastructure).
-  - Gate 09 merged OR in-flight (the "Contribute updates" CTA on the husbandry page links here).
+  - Gate 09 merged (the "Contribute updates" CTA links here with species context).
+  - Gate 11 merged (auth MVP — provides the Tier 2 session).
+  - Gate 15 in parallel (shared `submissions` Django app, shared admin patterns, shared email helpers).
 unlocks:
-  - Post-MVP Tier 3+ submission pipeline (this form is the deliberate MVP precursor — locked Q4, 2026-04-18).
+  - Curated husbandry-tip submission pipeline → SpeciesHusbandry record edits
+  - Foundation for the species-profile "Contribute husbandry update" CTA going from mailto stub to a real form
 branch: gate/10-husbandry-contribute-form
-deadline: Post-ECA-Workshop (descoped 2026-04-19; reopen as first post-workshop backlog item)
+deadline: 2026-05-31 (pre-ABQ ship in parallel with Gate 15; cut to post-ABQ if schedule pressure)
 input:
   - docs/planning/business-analysis/species-profile-husbandry.md (locked Q4)
+  - docs/planning/specs/gate-15-population-submission-form.md (sibling form; shares infrastructure)
+  - docs/planning/business-analysis/gate-10-contribute-form-assessment-2026-04-19.md (original deferral rationale; reopen overrides)
   - Gate 09 spec (calling surface — the CTA links here with species context)
 ---
 
-# Gate 10 — Husbandry Contribute: Django-backed Contact Form
+# Gate 10 — Husbandry Contribute: Authenticated Submission Form
 
-> **Status: Deferred to post-MVP (2026-04-19).**
-> BA recommended descoping Gate 10 from the ABQ BioPark ECA Workshop
-> (June 1–5, 2026) MVP. The Gate 09 mailto stub at
-> `frontend/app/contribute/husbandry/page.tsx` remains the workshop-visible
-> contribute surface. Reopen this gate as the first post-workshop backlog
-> item, ideally paired with a small moderation-UI sub-gate (admin list
-> filters, one-click accept/reject) so Aleksei isn't hand-copying
-> contributions into `SpeciesHusbandry` forever. Full reasoning, scope
-> reductions if plans change, and open questions: see
-> `docs/planning/business-analysis/gate-10-contribute-form-assessment-2026-04-19.md`.
+> **Status: Reopened 2026-05-26.**
+> Original deferral (2026-04-19) assumed pre-ABQ inbound volume was near-zero
+> and anonymous public submission was the right shape. Both assumptions
+> shifted in May:
+>
+> 1. **Real Tier 2 signups arrived** — hobbyist keepers with fish at home,
+>    no contribute path beyond a mailto.
+> 2. **Anonymous submission dropped** — per Aleksei 2026-05-26: "We won't
+>    be dealing with anonymous entries; if they don't want to give their
+>    name I don't believe they are trustworthy." Conservation-data
+>    provenance matters; this isn't a hobby forum.
+> 3. **Self-serve trust-bypass (Gate 14, proposed 2026-05-26) was rejected**
+>    as too risky pre-ABQ. Curated submission via admin queue is the
+>    alternative, and that flow is what THIS gate now ships.
+>
+> **The original spec body below is mostly preserved.** Key deltas
+> introduced by the reopen:
+>
+> - **No anonymous path.** Tier 2+ session required to submit (Story 10.1
+>   updated; Stories 10.5 spam-mitigation reduced since auth + manager-notify
+>   carries more weight).
+> - **Shared `submissions` Django app** with Gate 15's `PopulationSubmission`.
+> - **Shared admin polish patterns** (list filters, one-click promote action,
+>   bulk reject/spam).
+> - **Manager-notification on submit** via the existing `mail_managers`
+>   path (shipped 2026-05-26 in PR #197).
+> - **Submitter-acknowledgment email on accept/reject** via
+>   `send_translated_email()` (shipped via Gate L4).
+>
+> Where the original spec says "Tier 1 / anonymous," read "Tier 2+
+> authenticated" throughout.
 
 ## Goal
 
