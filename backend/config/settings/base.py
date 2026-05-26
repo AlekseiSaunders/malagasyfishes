@@ -240,6 +240,12 @@ EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
 _manager_emails = env.list("DJANGO_MANAGERS", default=["alekseisaunders@gmail.com"])
 MANAGERS = [(email.split("@")[0], email) for email in _manager_emails if email]
 EMAIL_SUBJECT_PREFIX = env("EMAIL_SUBJECT_PREFIX", default="[MFFCP] ")
+# mail_managers / mail_admins use SERVER_EMAIL as the From address (NOT
+# DEFAULT_FROM_EMAIL). Django's default is "root@localhost", which Resend
+# rejects because the domain isn't verified — silently, with fail_silently=True,
+# so the alert never lands. Reuse DEFAULT_FROM_EMAIL by default; override via
+# env if you ever need a separate technical-alert sender identity.
+SERVER_EMAIL = env("SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
 
 # Auth
 AUTHENTICATION_BACKENDS = ["accounts.backends.EmailBackend"]

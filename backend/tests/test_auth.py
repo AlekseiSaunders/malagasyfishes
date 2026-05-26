@@ -121,6 +121,12 @@ class TestRegister:
         assert "New Bie" in msg.body
         assert "No institution requested" in msg.body
         assert "/admin/accounts/user/" in msg.body
+        # mail_managers uses SERVER_EMAIL as the From — guard against the
+        # Django default "root@localhost", which Resend rejects (unverified
+        # domain) and which is the bug that initially shipped this feature
+        # silently broken.
+        assert "localhost" not in msg.from_email
+        assert msg.from_email == settings.DEFAULT_FROM_EMAIL
 
     def test_register_manager_notification_disabled_when_managers_empty(
         self, api_client: APIClient, settings
