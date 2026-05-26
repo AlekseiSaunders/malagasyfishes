@@ -13,34 +13,39 @@ round of development. I'll maintain it as items land or become obsolete.
 - **Don't delete completed items** — move them to the "Done" section at
   the bottom with a short note on what it unlocked.
 
-**Last updated:** 2026-05-02. Between 2026-04-30 and now: Gates 13–16
-shipped (institution-scoped editing, BreedingEvent ledger, GBIF
-Darwin Core Archive export, FieldProgram CRUD), the Tier 3+ transfer-
-drafting UI is live (PR #185 / #186 / #189), the staging beat
-container deploy regression was fixed (PR #173 / #188) so weekly
-IUCN sync is now firing on prod, the coordinator institution-claim
-audit row landed (PR #190, closes Gate 13 R-arch-1), and the ABQ
-demo script shipped at `docs/demo/abq-workshop-demo.md` (PR #191,
-PDF in `docs/pdf/`). §4.2 auto-resolved → moved to Done.
+**Last updated:** 2026-05-26. Since the 2026-05-02 refresh: the brand
+rename to "Malagasy Freshwater Fishes Conservation Platform" landed
+(PRs #193–#195) along with site logo + footer wordmark. The
+platform contact email was repointed off WPS to a personal gmail
+(PR #196). New-signup alerts now email platform managers on
+registration (PRs #197 + #198 — the SERVER_EMAIL fix). And the data
+side of the ABQ critical path is live on prod: §2.7 EAZA EEPs
+entered (Bristol Zoo Project + National Aquarium Denmark, 2 EEP
+program rows), §2.1 CARES populations seeded with 6 real hobbyist
+keepers + 10 populations + 5 CARES program rows, and §2.11 French
+review pass complete (`NEXT_PUBLIC_FEATURE_I18N_FR=true`, species
+distribution_narrative renders in FR via `Accept-Language: fr`).
 
 ---
 
 ## 🚨 Start here next
 
-The single highest-leverage thing you can do this week is **§2.7 —
-seed the two real EAZA EEP rows.** Thirty minutes of admin clicking,
-two real program rows, and Panel 2 + Panel 5 of the coordinator
-dashboard immediately stop reading as "empty platform". It's the
-warm-up lap before §2.1 (CARES population data) and the smallest
-investment for the biggest visible-progress signal at ABQ.
+The remaining pre-ABQ critical path is **§4.1 (demo dry-run) → §4.3
+(test-data hygiene audit).** Everything before §4 on the pre-workshop
+list is now done or moved to Done. The dashboard at prod currently
+holds 8 institutions, 10 populations, 7 active programs (2 EEP + 5
+CARES), 4 threatened species with captive populations — enough story
+to demo without empty panels.
 
-After §2.7 lands, the rest of the pre-ABQ critical path — in order —
-is **§2.1 (CARES populations) → §2.4 (CoordinatedProgram CARES rows
-alongside §2.1) → §2.11 (FR approval pass to flip the French flag)
-→ §4.1 (demo dry-run, script is now drafted at
-`docs/demo/abq-workshop-demo.md`).**
+**§4.1 is the highest-value remaining task.** Walk
+`docs/demo/abq-workshop-demo.md` end-to-end against prod at least
+once before June 1; catching one demo bug now is worth more than
+anything else this week. Pair with me on it and we can fix anything
+that surfaces same-session.
 
-Everything else is real work but not workshop-critical.
+Optional ongoing items that don't block ABQ but you can do as data
+comes in: §2.4 (more CoordinatedProgram rows), §2.5 (Transfers as
+moves happen), §2.8 (BreedingRecommendations), §2.9 (BreedingEvents).
 
 ---
 
@@ -111,10 +116,16 @@ distribution. Read that PR's findings, then ping me with "keep" or
 
 ### 2.1 Enter real CARES population data
 
-**Priority:** **HIGHEST — blocks ABQ demo narrative.** The coordinator
-dashboard is a read-only view over this data — without it, ABQ is a
-demo of empty panels. Step 2 of the critical path above; do §2.7 first
-for the warm-up lap.
+**Status as of 2026-05-26:** **ABQ-blocking baseline is in.** Prod
+currently holds 6 hobbyist keepers (Big Kahoona, C. E. Keys, D. Duerst,
+Jaidee, Mighty Gonopodium, Nick Condon), 10 populations, and 4
+threatened species with captive populations. The dashboard reads as a
+working platform, not empty panels. The runbook below stays in place
+as the reference for adding more keepers as you learn of them — this
+is now an ongoing entry workflow, not a pre-ABQ blocker.
+
+**Priority:** medium-ongoing (was: HIGHEST — blocks ABQ demo
+narrative).
 
 **Update 2026-04-30:** a demo-shaped seed at
 `data/seed/coordinator-demo/institutions_populations.csv` is now in
@@ -243,7 +254,13 @@ chip at between other tasks.
 
 ### 2.4 Enter CoordinatedProgram rows for known SSPs / EEPs / CARES
 
-**Priority:** medium-high for ABQ demo narrative.
+**Status as of 2026-05-26:** **ABQ-blocking baseline is in.** Prod
+holds 7 active program rows — 2 EEP (from §2.7) and 5 CARES — which
+is enough to make Panel 2 and Panel 5 read as a working coordination
+layer. SSPs and independent/other programs are still empty; add them
+as you learn of more. Runbook below stays as the reference.
+
+**Priority:** medium-ongoing (was: medium-high for ABQ demo narrative).
 
 **What it is:** `CoordinatedProgram` is the "who runs this species'
 program" layer (landed in Gate 4 Phase 1). Each row links a species
@@ -341,60 +358,6 @@ incorrectly (e.g. CARES populations that should be in
 
 **How to verify:** Panel 2 on the coordinator dashboard shows counts
 that match your mental model.
-
----
-
-### 2.7 Seed real EAZA EEPs from the April 2026 programme overview
-
-**Priority:** **HIGH — start here.** These are **real, public** program
-entries — not demo data — and they make Panel 2 and Panel 5 feel
-meaningfully populated even before CARES data lands. Step 1 of the
-critical path above. ~30 minutes of admin clicking; smallest
-investment for the biggest immediately-visible dashboard win, and a
-useful rehearsal lap on the admin UI before §2.1's bulk entry.
-
-**Source:** `data/reference/April_2026_8e69dc12b4.pdf` (EAZA Ex-situ
-Programme overview, April 2026, rows 31 and 36 on page 1). These are
-the only two EEPs that directly touch Madagascar endemic freshwater
-fish families on the list.
-
-**Rows to enter** (all via
-<https://api.malagasyfishes.org/admin/populations/coordinatedprogram/add/>):
-
-| Field | Value #1 | Value #2 |
-|---|---|---|
-| Species | Pick one Bedotiidae species as the anchor (e.g. *Bedotia madagascariensis*) — or the whole family if we model that later | Pick one Paretroplus species as the anchor (e.g. *Paretroplus menarambo*) |
-| Program type | `eep` | `eep` |
-| Name | `EAZA EEP: Madagascar rainbowfishes (Bedotiidae)` | `EAZA EEP: Cichlids (Cichlidae)` |
-| Status | `active` | `active` |
-| Coordinating institution | Create `Bristol Zoo Project` (type `zoo`, country `United Kingdom`) if not present | Create `National Aquarium Denmark` (type `aquarium`, country `Denmark`) |
-| Studbook keeper | Blank unless Charles Fusari / Peter Petersen get accounts | Blank |
-| Plan summary | "EAZA EEP for the Bedotiidae rainbowfish family. Coordinator: Charles Fusari (Bristol Zoo Project). IUCN: EN. As of April 2026 EAZA overview." | "EAZA EEP for the Cichlidae family. Coordinator: Peter Petersen (National Aquarium Denmark). IUCN: CR. As of April 2026 EAZA overview." |
-| Start date | Blank (not given in the overview) | Blank |
-
-**Note:** Our `CoordinatedProgram.species` is currently a single FK, so
-"family-level" EEPs need a stand-in species row. Pick the one most
-representative or that you have the most captive data for. Post-ABQ we
-can extend the model to carry family-level programs (Gate 4 Phase 2
-decision).
-
-**Other EAZA EEPs worth noting (from the same overview):**
-
-Not Madagascar-endemic but tangentially relevant:
-
-- **Goodeids (Goodeidae)** — Chester Zoo, Joe Chattell, EW-EN. Good
-  reference for CARES-adjacent hobbyist programs; see
-  `Action-Plan-for-the-Conservation-of-Mexicos-Goodeid-Fishes-23-33.pdf`.
-- **Sail-fin silversides / Pseudomugilidae** — Jens Bohn, CR-DD.
-- **Toothcarps (Valenciidae)** — Bristol Zoo Project, Brian Zimmerman, CR.
-
-These are not Madagascar species, so don't enter them against our
-registry — but they're useful context if someone at ABQ asks "who else
-runs freshwater-fish EEPs."
-
-**How to verify:** `/dashboard/coordinator` Panel 2 shows non-zero
-"Studbook-managed" or "Breeding, not studbook" counts; Panel 5
-"in flight" stays empty until you log Transfers.
 
 ---
 
@@ -516,135 +479,30 @@ that it'd read as a trend line instead of a sparse list.
 
 ---
 
-### 2.11 Approve translated species rows (FR now; DE + ES post-ABQ)
+### 2.11 Approve German + Spanish translated species rows (post-ABQ)
 
-**Priority:** **HIGH — blocks French flag-flip for ABQ.** The French
-machine translation + voice-review pipeline finished 2026-04-30 with
-143 species rows sitting at `writer_reviewed`. Until you walk through
-them and bulk-approve to `human_approved`, the public site continues
-to fall back to English on `/fr/` URLs (the review-gate is enforced
-in prod). Same workflow comes back post-ABQ for German + Spanish.
+**Status as of 2026-05-26:** the French (FR) approval pass that
+originally lived here is DONE — see the Done section below. The DE
+and ES branches of the same workflow are still pending and were
+always planned as post-ABQ work.
 
-**Status table:**
+**Priority:** low-medium, post-ABQ. The French flag-flip was the
+critical pre-workshop piece; German and Spanish carry less narrative
+weight at ABQ and can wait.
 
-| Locale | Frontend UI catalog | Species `distribution_narrative` | Backend `gettext` `.po` | Public flag |
-|---|---|---|---|---|
-| `fr` | Translated + voice-reviewed | **143 rows in `writer_reviewed` — your approval pass** | Translated | `..._FR=false` (flip after approval) |
-| `de` | MT pre-staged (786 strings) | 143 rows in `mt_draft` (post-ABQ) | Translated | `..._DE=false` |
-| `es` | MT pre-staged (786 strings) | 143 rows in `mt_draft` (post-ABQ) | Translated | `..._ES=false` |
+**What's left:** same workflow as the (now-done) French pass, swap
+`fr` → `de` / `es` in the TranslationStatus admin filter. No
+human-approved rows for DE/ES yet, so `NEXT_PUBLIC_FEATURE_I18N_DE`
+and `..._ES` stay `false` in Vercel until you walk through each.
 
-**Two-column comparison — side-by-side admin walkthrough (the
-operational path):**
+**Plan docs:** `docs/planning/specs/gate-L5-german.md` and
+`docs/planning/specs/gate-L6-spanish.md` (plurals + voice review +
+family-batched approval, ~1 day per locale).
 
-The TranslationStatus admin's change form puts the English source
-read-only on top and the target locale below, editable. One row per
-`(species, field, locale)` tuple — so for a single species, comparing
-EN vs FR lives in one row, EN vs DE lives in a sibling row, etc.
-
-1. <https://api.malagasyfishes.org/admin/i18n/translationstatus/>
-   (or `localhost:8000/admin/i18n/translationstatus/` for local).
-2. Right-hand filter column:
-   - **Locale** = `fr` (start with French; switch to `de` / `es`
-     post-ABQ for the same flow).
-   - **Status** = `writer_reviewed` (these are the rows that both
-     the MT pipeline and the conservation-writer agent already
-     pre-screened).
-   - **Content type** = `Species`.
-3. **Sort by `object_id`** (the column header). This groups rows by
-   species — useful because each species can have up to 4 translatable
-   fields (`distribution_narrative`, `description`, `ecology_notes`,
-   `morphology`). Most species today only have `distribution_narrative`
-   populated, so it's mostly one row per species.
-4. Click into a row. The change form shows:
-   - **English source** pane (read-only, gray background) — the
-     authoritative EN text from `Species.<field>_en`.
-   - **Target translation** pane (editable, yellow background) —
-     the current FR (or DE / ES) text from `Species.<field>_<locale>`.
-5. Read both panes. Three outcomes:
-   - **Approve as-is**: hit Save (no edits), then bulk-approve in step
-     6 below.
-   - **Edit then approve**: tweak the target pane, hit Save (writes
-     back to `<field>_<locale>` on the species row), then bulk-approve.
-   - **Send back to mt_draft**: substantive concern → bulk-action
-     "Send back to mt_draft" demotes the row; conservation-writer can
-     re-review.
-6. **Bulk approve a batch:** back on the list view, multi-select
-   reviewed rows, Action dropdown → **"Approve: writer_reviewed →
-   human_approved"** → Go. Stamps `human_approved_by` (= you) and
-   `human_approved_at` (= now) on every selected row.
-
-**Three-locale comparison — CLI for spot-checking one species across
-EN / FR / DE / ES:**
-
-The admin only shows EN vs ONE target locale at a time. To eyeball
-all four locales side-by-side for one species (good for catching MT
-drift between locales — e.g. FR says "rivière X" but DE invented
-"Fluss Y"), use the public API. No auth needed; `Accept-Language`
-toggles which locale the response field comes back in:
-
-```bash
-SP_ID=1   # Bedotia albomarginata; pick whichever species you're checking
-
-for LOCALE in en fr de es; do
-  echo "=== $LOCALE ==="
-  curl -s -H "Accept-Language: $LOCALE" \
-       "http://localhost:8000/api/v1/species/$SP_ID/" \
-       | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['distribution_narrative'])"
-  echo
-done
-```
-
-That prints the English source plus the three translated versions
-back to back. If the locale fallback badge fires for any of them
-(`<field>_locale_actual = 'en'` even though you asked for `fr`), the
-review-gate hasn't approved that row yet — see step 6 above.
-
-**Direct DB comparison** — if you want raw `_en` / `_fr` / `_de` /
-`_es` columns for one species ignoring the review-gate, drop into the
-Django shell:
-
-```bash
-docker compose exec -T web python manage.py shell -c "
-from species.models import Species
-sp = Species.objects.get(pk=1)
-for f in ('description', 'ecology_notes', 'distribution_narrative', 'morphology'):
-    print(f'--- {f} ---')
-    for loc in ('en', 'fr', 'de', 'es'):
-        val = getattr(sp, f'{f}_{loc}', '') or ''
-        print(f'  {loc}: {val[:200]}')
-    print()
-"
-```
-
-**FR approval pass — your TODO this week:**
-
-- [ ] Filter to `locale=fr`, `status=writer_reviewed`,
-      `content_type=Species` (143 rows expected).
-- [ ] Walk family by family. **Bedotiidae (29) first** — that's the
-      ABQ banner family and the smallest meaningful batch. Then
-      Cichlidae (48 — biggest), Aplocheilidae (8), Anchariidae (6),
-      and the 21 small families (~52 rows combined).
-- [ ] Bulk-approve each family's batch via the admin action.
-- [ ] When at least Bedotiidae is approved, run the flag-flip
-      pre-flight in `docs/operations/i18n-flag-flip-runbook.md` and
-      flip `NEXT_PUBLIC_FEATURE_I18N_FR=true` in Vercel production.
-- [ ] Smoke-test `/fr/species/<bedotiidae-id>` on prod — French
-      distribution narrative should render (no `(English)` fallback
-      badge on the approved fields).
-
-**DE + ES — post-ABQ:** same flow, swap `fr` → `de` / `es` in the
-filter. No human-approved rows yet, so the public flag stays
-`false`. See `docs/planning/specs/gate-L5-german.md` and
-`docs/planning/specs/gate-L6-spanish.md` for the post-ABQ workplan
-(plurals + voice review + family-batched approval, ~1 day per
-locale).
-
-**How to verify:** run the multi-locale CLI snippet above against an
-approved species and confirm the FR field renders the French text
-(not the English fallback). On prod with the gate on, only
-`human_approved` rows make it through; on local with
-`I18N_ENFORCE_REVIEW_GATE=False`, `writer_reviewed` rows also render
-(useful for testing the comparison flow before flipping anything).
+**How to verify (when done):** the multi-locale CLI in the §2.11 FR
+Done entry below returns DE/ES text with `locale_actual = 'de'` /
+`'es'` instead of the `'en'` fallback, and the locale switcher
+exposes the language on prod.
 
 ---
 
@@ -847,6 +705,119 @@ Listing these so you know they're not on your plate.
 Completed items are archived here. We keep the full how-to for each so
 there's a runbook to refer back to when something needs to be re-done
 (e.g. secret rotation). Newest at the top.
+
+### 2.11 (FR) Approve translated species rows — French pass — DONE
+
+**Completed:** 2026-05-26 (verified live on prod).
+**Unlocks:** the public `/fr/` URLs render real French species
+content. Species API returns FR `distribution_narrative` with
+`locale_actual = 'fr'` when called with `Accept-Language: fr`.
+`NEXT_PUBLIC_FEATURE_I18N_FR` is flipped on in Vercel production,
+and the homepage at `https://malagasyfishes.org/fr` renders the
+French UI chrome (`Espèces`, `Tableau de bord`, `Connexion`,
+`Programmes`). DE + ES remain pending post-ABQ — those branches of
+the same workflow are kept open as the new (slimmed) §2.11.
+
+**Operational runbook (preserved for the DE + ES passes):**
+
+The TranslationStatus admin's change form puts the English source
+read-only on top and the target locale below, editable. One row per
+`(species, field, locale)` tuple.
+
+1. <https://api.malagasyfishes.org/admin/i18n/translationstatus/>
+   (or `localhost:8000/admin/i18n/translationstatus/` for local).
+2. Right-hand filter column:
+   - **Locale** = `fr` (or `de` / `es` when you start those passes).
+   - **Status** = `writer_reviewed` (rows the MT pipeline and the
+     conservation-writer agent already pre-screened).
+   - **Content type** = `Species`.
+3. **Sort by `object_id`** to group rows by species. Most species
+   today only have `distribution_narrative` populated, so it's
+   mostly one row per species.
+4. Click into a row. EN source pane (read-only) on top, target pane
+   (editable) below. Three outcomes:
+   - **Approve as-is**: Save, then bulk-approve in step 6.
+   - **Edit then approve**: tweak target, Save, then bulk-approve.
+   - **Send back to mt_draft**: substantive concern → bulk-action
+     demotes the row for conservation-writer re-review.
+5. **Bulk approve a batch:** list view, multi-select reviewed rows,
+   Action dropdown → **"Approve: writer_reviewed → human_approved"**
+   → Go. Stamps `human_approved_by` (= you) and `human_approved_at`.
+6. Once at least the banner family (Bedotiidae for FR) is approved,
+   run the flag-flip pre-flight in
+   `docs/operations/i18n-flag-flip-runbook.md` and flip
+   `NEXT_PUBLIC_FEATURE_I18N_<LANG>=true` in Vercel.
+
+**Multi-locale spot-check CLI:**
+
+```bash
+SP_ID=111   # any species id
+
+for LOCALE in en fr de es; do
+  echo "=== $LOCALE ==="
+  curl -s -H "Accept-Language: $LOCALE" \
+       "https://api.malagasyfishes.org/api/v1/species/$SP_ID/" \
+       | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('distribution_narrative') or '')"
+  echo
+done
+```
+
+If `locale_actual` returns `'en'` for a locale you asked for, the
+review-gate hasn't approved that row yet.
+
+**Direct DB comparison** (ignores the review-gate):
+
+```bash
+docker compose exec -T web python manage.py shell -c "
+from species.models import Species
+sp = Species.objects.get(pk=1)
+for f in ('description', 'ecology_notes', 'distribution_narrative', 'morphology'):
+    print(f'--- {f} ---')
+    for loc in ('en', 'fr', 'de', 'es'):
+        val = getattr(sp, f'{f}_{loc}', '') or ''
+        print(f'  {loc}: {val[:200]}')
+    print()
+"
+```
+
+### 2.7 Seed real EAZA EEPs from the April 2026 programme overview — DONE
+
+**Completed:** 2026-05-26 (verified — 2 EEP program rows live on
+prod; Bristol Zoo Project + National Aquarium Denmark institutions
+created; coordinator dashboard reads `active_programs_by_type.eep = 2`).
+**Unlocks:** Panel 2 + Panel 5 of the coordinator dashboard read as
+populated with real, public program data — the ABQ visual-content
+backstop that was the planned warm-up lap before §2.1's bulk entry.
+
+**Source:** `data/reference/April_2026_8e69dc12b4.pdf` (EAZA Ex-situ
+Programme overview, April 2026, rows 31 and 36 on page 1). The only
+two EEPs on the list that directly touch Madagascar endemic
+freshwater fish families.
+
+**Rows entered** (via
+<https://api.malagasyfishes.org/admin/populations/coordinatedprogram/add/>):
+
+| Field | Value #1 (Bedotiidae) | Value #2 (Cichlidae) |
+|---|---|---|
+| Species | Bedotiidae anchor species | Paretroplus anchor species |
+| Program type | `eep` | `eep` |
+| Name | `EAZA EEP: Madagascar rainbowfishes (Bedotiidae)` | `EAZA EEP: Cichlids (Cichlidae)` |
+| Status | `active` | `active` |
+| Coordinating institution | `Bristol Zoo Project` (zoo, UK) | `National Aquarium Denmark` (aquarium, Denmark) |
+| Studbook keeper | Blank (Charles Fusari / Peter Petersen have no accounts) | Blank |
+| Plan summary | "EAZA EEP for the Bedotiidae rainbowfish family. Coordinator: Charles Fusari (Bristol Zoo Project). IUCN: EN. As of April 2026 EAZA overview." | "EAZA EEP for the Cichlidae family. Coordinator: Peter Petersen (National Aquarium Denmark). IUCN: CR. As of April 2026 EAZA overview." |
+
+**Modeling note:** `CoordinatedProgram.species` is a single FK, so
+"family-level" EEPs use a stand-in species row. Post-ABQ we can
+extend the model to carry family-level programs (Gate 4 Phase 2
+decision).
+
+**Other EAZA EEPs noted but not entered** (not Madagascar-endemic;
+useful context if asked at ABQ):
+
+- **Goodeids (Goodeidae)** — Chester Zoo, Joe Chattell, EW-EN.
+- **Sail-fin silversides / Pseudomugilidae** — Jens Bohn, CR-DD.
+- **Toothcarps (Valenciidae)** — Bristol Zoo Project, Brian Zimmerman, CR.
 
 ### 4.2 Decide whether to keep the Coordinator nav link visible at ABQ — DONE
 
