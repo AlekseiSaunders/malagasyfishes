@@ -86,7 +86,7 @@ def send_translated_email(
         getattr(
             settings,
             "PLATFORM_CONTACT_EMAIL",
-            "alex.saunders@wildlifeprotectionsolutions.org",
+            "alekseisaunders@gmail.com",
         ),
     )
 

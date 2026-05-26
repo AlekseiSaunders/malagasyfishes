@@ -29,10 +29,10 @@ export default async function ContributeHusbandryStub({
       <p className="mt-4 text-slate-700">
         {t("bodyPrefix")}
         <a
-          href={`mailto:alex.saunders@wildlifeprotectionsolutions.org?subject=${encodeURIComponent(subject)}`}
+          href={`mailto:alekseisaunders@gmail.com?subject=${encodeURIComponent(subject)}`}
           className="text-sky-700 hover:underline"
         >
-          alex.saunders@wildlifeprotectionsolutions.org
+          alekseisaunders@gmail.com
         </a>
         {t("bodySuffix")}
       </p>

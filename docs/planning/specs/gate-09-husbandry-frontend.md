@@ -268,7 +268,7 @@ husbandry URLs as part of this gate — small tweak to `warm-cache.sh`).
 
 If Gate 10 (contribute form) slips, this gate can still ship with the
 "Contribute updates" CTA pointing to a placeholder route that renders
-"Contribute flow coming soon — email alex.saunders@wildlifeprotectionsolutions.org"
+"Contribute flow coming soon — email alekseisaunders@gmail.com"
 as a temporary fallback. Demo does not require the contribute form to be
 functional; it requires it to be **present** as a visible frame.
 

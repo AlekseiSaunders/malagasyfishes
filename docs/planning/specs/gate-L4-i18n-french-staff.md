@@ -770,7 +770,7 @@ These are real items that L4 deliberately does not ship. Each has a clear succes
    - A shared base template at `backend/templates/email/base.html` carrying:
      - Header band with platform logo + name (links to canonical URL)
      - Body region with localized greeting + content blocks
-     - Footer with platform contact (`alex.saunders@wildlifeprotectionsolutions.org`),
+     - Footer with platform contact (`alekseisaunders@gmail.com`),
        project URL, and unsubscribe-equivalent text (account → notification preferences
        link, even though notification preferences are L5+ — link can land on /account
        in L4 and route to the future preferences sub-page)

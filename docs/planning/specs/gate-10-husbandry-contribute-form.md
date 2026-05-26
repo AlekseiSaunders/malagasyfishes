@@ -123,7 +123,7 @@ New model `HusbandryContribution` (same `husbandry` app as Gate 08):
   admin only at MVP).
 - Email notification: on successful create, send plain-text email to
   `HUSBANDRY_CONTRIBUTION_NOTIFY` setting (default
-  `alex.saunders@wildlifeprotectionsolutions.org`) with submission contents
+  `alekseisaunders@gmail.com`) with submission contents
   and a link to the admin change page. Use Django's email backend; SMTP
   config already in place.
 

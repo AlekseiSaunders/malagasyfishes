@@ -105,7 +105,7 @@ export default async function InstitutionDashboardPage() {
             {t.rich("emptyState.contact", {
               email: (chunks) => (
                 <a
-                  href="mailto:alex.saunders@wildlifeprotectionsolutions.org"
+                  href="mailto:alekseisaunders@gmail.com"
                   className="text-sky-700 underline underline-offset-2 hover:text-sky-900"
                 >
                   {chunks}

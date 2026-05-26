@@ -64,7 +64,7 @@ DATASET_LICENSE_NAME = "Creative Commons Attribution 4.0 International (CC BY 4.
 DATASET_LANGUAGE = "en"
 DATASET_RIGHTS_HOLDER = "Malagasy Freshwater Fishes Conservation Platform"
 DATASET_PUBLISHER = "Malagasy Freshwater Fishes Conservation Platform"
-DEFAULT_CONTACT_EMAIL = "alex.saunders@wildlifeprotectionsolutions.org"
+DEFAULT_CONTACT_EMAIL = "alekseisaunders@gmail.com"
 DEFAULT_CONTACT_NAME = "Aleksei Saunders"
 
 GENERALIZATION_NOTE = (
