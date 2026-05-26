@@ -1235,6 +1235,60 @@
       "subjectGeneric": "Neues aus der Tierhaltung",
       "subjectForSpecies": "Neues aus der Tierhaltung – Arten {speciesId}",
       "backToHusbandry": "← Zurück zur Seite „Tierhaltung“"
+    },
+    "population": {
+      "metaTitle": "Register a captive population — Malagasy Freshwater Fishes",
+      "metaDescription": "Submit a captive population you keep — species, counts, breeding status. Reviewed before going public.",
+      "eyebrow": "Register your fish",
+      "title": "Register a captive population",
+      "subtitle": "Tell us what you keep. A reviewer checks each submission before it appears on the public registry; you'll get an email when yours goes through.",
+      "form": {
+        "speciesLabel": "Species",
+        "speciesPlaceholder": "Search by scientific name, common name, or family…",
+        "speciesHelp": "Don't see your species? <email>Email us</email> — we'll review whether to add it to the platform.",
+        "countTotalLabel": "How many do you have?",
+        "countTotalHelp": "A number, including any unsure ones.",
+        "showBreakdown": "+ Show sex breakdown",
+        "hideBreakdown": "− Hide sex breakdown",
+        "countMaleLabel": "Males",
+        "countFemaleLabel": "Females",
+        "countUnsexedLabel": "Unsexed",
+        "breakdownReconcile": "{entered, plural, =0 {No breakdown entered} other {Total entered: # / {total}}}",
+        "breedingStatusLabel": "Breeding status",
+        "lastCensusDateLabel": "Last counted on",
+        "notesLabel": "Notes (optional)",
+        "notesPlaceholder": "Lineage, tank size, where you got them, recent issues…",
+        "disclaimer": "Reviewed before publishing.",
+        "submit": "Submit for review",
+        "submitting": "Submitting…",
+        "countSplitExceedsTotal": "Sex breakdown ({breakdown}) exceeds total ({total}). Either raise the total or lower one of the sex counts.",
+        "reconcileTitle": "The breakdown doesn't quite match",
+        "reconcileBody": "You entered {total} total but the sex breakdown adds to {breakdown}. How should we reconcile?",
+        "reconcileMatchTotal": "Match total to breakdown ({breakdown})",
+        "reconcileKeepTotal": "Keep total, mark {extras} as unsexed",
+        "reconcileLetMeFix": "Let me fix it"
+      },
+      "breeding": {
+        "breeding": "Breeding",
+        "non-breeding": "Not breeding",
+        "unknown": "Unknown"
+      },
+      "errors": {
+        "notAuthenticated": "Your sign-in expired. Please sign in again to submit.",
+        "rateLimited": "You've submitted recently — please wait a moment and try again.",
+        "notAvailable": "Submissions aren't open yet. Check back soon.",
+        "unexpected": "Something went wrong on our end. Please try again, or email us if the problem persists."
+      },
+      "thanks": {
+        "metaTitle": "Submission received — Malagasy Freshwater Fishes",
+        "eyebrow": "Thank you",
+        "title": "Submission received",
+        "body1": "Your submission is in review. A reviewer will check it and, if everything looks right, add it to the public registry.",
+        "body2": "You'll get an email when that happens — usually within 48 hours.",
+        "escalation": "If you don't hear back within a few days, email alekseisaunders@gmail.com and reference this submission.",
+        "backToSpecies": "← Back to species profile",
+        "submitAnother": "Submit another"
+      }
     }
   },
   "husbandry": {

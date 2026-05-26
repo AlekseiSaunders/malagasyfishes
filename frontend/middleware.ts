@@ -129,6 +129,25 @@ async function authGate(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next();
   }
 
+  // Gate 15: authenticated population contribute form. Tier 2+ AND
+  // token AND the contribute-population feature flag both on (the
+  // server-side flag `CONTRIBUTE_POPULATION_ENABLED` is independent —
+  // see backend/submissions/views.py). Falls back to redirecting home
+  // if either flag is off, so the route is invisible until launch.
+  if (path.startsWith("/contribute/population")) {
+    const contributeFlagOn =
+      process.env.NEXT_PUBLIC_FEATURE_CONTRIBUTE_POPULATION === "true";
+    if (!flagOn || !contributeFlagOn) {
+      const homeUrl = new URL(withLocale("/", locale), request.url);
+      return NextResponse.redirect(homeUrl);
+    }
+    const tier = typeof token?.tier === "number" ? token.tier : 0;
+    if (!token || tier < INSTITUTION_MIN_TIER) {
+      return redirectToLogin(request, fullPath, locale);
+    }
+    return NextResponse.next();
+  }
+
   return NextResponse.next();
 }
 
