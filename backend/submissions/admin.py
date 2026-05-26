@@ -13,8 +13,11 @@ the change form (admin-only) but deliberately hidden from the list view.
 
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 from django.contrib import admin, messages
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponseRedirect
+from django.urls import path, reverse
 from django.utils.translation import gettext_lazy as _
 
 from submissions.models import (
@@ -22,7 +25,7 @@ from submissions.models import (
     PopulationSubmission,
     SubmissionStatus,
 )
-from submissions.services import reject_submission
+from submissions.services import reject_submission, resolve_keeper_institution
 
 
 class _ReadOnlyAuditMixin:
@@ -67,7 +70,139 @@ class PopulationSubmissionAdmin(_ReadOnlyAuditMixin, admin.ModelAdmin):
     autocomplete_fields = ["species"]
     ordering = ["-created_at"]
     list_select_related = ["submitter_user", "species", "reviewer", "accepted_population"]
-    actions = ["mark_rejected", "mark_spam"]
+    actions = ["promote_selected", "mark_rejected", "mark_spam"]
+
+    # --- one-click promote (architecture D3) ---
+
+    def get_urls(self):
+        """Add the custom promote URL alongside Django admin's default URLs."""
+        urls = super().get_urls()
+        custom = [
+            path(
+                "<int:pk>/promote/",
+                self.admin_site.admin_view(self.promote_view),
+                name="submissions_populationsubmission_promote",
+            ),
+        ]
+        # Custom URLs must come first so Django routes them before the
+        # generic <pk>/change/ pattern.
+        return custom + urls
+
+    def promote_view(self, request: HttpRequest, pk: int) -> HttpResponseRedirect:
+        """Stash the submission ID in session, redirect to the prefilled
+        ExSituPopulation add form.
+
+        ExSituPopulationAdmin.response_add picks up the session marker
+        after admin saves the form and (a) links the new population back
+        to the submission, (b) flips submission status to accepted, (c)
+        sends the accept email.
+        """
+        submission = self.get_object(request, pk)
+        if submission is None:
+            self.message_user(
+                request,
+                _("Submission not found."),
+                level=messages.ERROR,
+            )
+            return HttpResponseRedirect(
+                reverse("admin:submissions_populationsubmission_changelist")
+            )
+
+        if submission.is_terminal:
+            self.message_user(
+                request,
+                _(
+                    "Submission #%(pk)d is already in terminal state '%(status)s' "
+                    "and cannot be promoted again."
+                )
+                % {"pk": submission.pk, "status": submission.status},
+                level=messages.WARNING,
+            )
+            return HttpResponseRedirect(
+                reverse(
+                    "admin:submissions_populationsubmission_change",
+                    args=[submission.pk],
+                )
+            )
+
+        # Where does this attach? Service function resolves the three
+        # branches (existing non-keeper / existing keeper / create new).
+        institution, source = resolve_keeper_institution(submission)
+
+        request.session["pending_promote_submission_id"] = submission.pk
+
+        prefill = {
+            "species": submission.species_id or "",
+            "count_total": submission.count_total,
+            "count_male": submission.count_male,
+            "count_female": submission.count_female,
+            "count_unsexed": submission.count_unsexed,
+            "breeding_status": submission.breeding_status,
+            "last_census_date": (
+                submission.last_census_date.isoformat() if submission.last_census_date else ""
+            ),
+            "notes": submission.notes or "",
+        }
+        if institution is not None:
+            prefill["institution"] = institution.pk
+
+        # Hint to admin: AC-15.20 / AC-15.11. If creating new, show the
+        # suggested display name in a message banner so admin can copy it
+        # when using the institution-autocomplete "+" button.
+        if source == "create_new" and submission.submitter_user is not None:
+            suggested_name = f"{submission.submitter_user.name} (keeper)"
+            self.message_user(
+                request,
+                _(
+                    "Promoting submission #%(pk)d. Submitter has no institution yet. "
+                    "Use the institution '+' button to create one. "
+                    "Suggested name: %(name)s"
+                )
+                % {"pk": submission.pk, "name": suggested_name},
+                level=messages.INFO,
+            )
+        elif source == "existing_keeper":
+            self.message_user(
+                request,
+                _(
+                    "Promoting submission #%(pk)d. Attaching to submitter's existing "
+                    "keeper institution: %(name)s"
+                )
+                % {"pk": submission.pk, "name": institution.name},
+                level=messages.INFO,
+            )
+        elif source == "existing_non_keeper":
+            # AC-15.21: attach to the existing non-keeper institution.
+            self.message_user(
+                request,
+                _(
+                    "Promoting submission #%(pk)d. Attaching to submitter's "
+                    "institution: %(name)s. Override if this looks wrong."
+                )
+                % {"pk": submission.pk, "name": institution.name},
+                level=messages.INFO,
+            )
+
+        url = reverse("admin:populations_exsitupopulation_add") + "?" + urlencode(prefill)
+        return HttpResponseRedirect(url)
+
+    @admin.action(description=_("Promote to ExSituPopulation (one row only)"))
+    def promote_selected(self, request: HttpRequest, queryset: object) -> object:
+        """Pick exactly one row, redirect to the promote view."""
+        if queryset.count() != 1:
+            self.message_user(
+                request,
+                _("Select exactly one submission to promote."),
+                level=messages.ERROR,
+            )
+            return None
+        submission = queryset.first()
+        return HttpResponseRedirect(
+            reverse(
+                "admin:submissions_populationsubmission_promote",
+                args=[submission.pk],
+            )
+        )
 
     @admin.display(description=_("Status"), ordering="status")
     def status_badge(self, obj: PopulationSubmission) -> str:

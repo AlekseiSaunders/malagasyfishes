@@ -144,6 +144,53 @@ class ExSituPopulationAdmin(admin.ModelAdmin):
             obj.save()
         formset.save_m2m()  # type: ignore[union-attr]
 
+    def response_add(self, request: HttpRequest, obj: ExSituPopulation, post_url_continue=None):
+        """Hook the post-save side of the "promote from submission" flow.
+
+        When admin lands here from the PopulationSubmissionAdmin promote
+        view, the session carries ``pending_promote_submission_id``. We
+        consume it here, link the new ExSituPopulation back to the
+        submission, flip submission status to accepted, and send the
+        accept email.
+
+        Lazy-imports ``submissions.services`` to avoid populations <->
+        submissions import-time circular dependency. Runtime coupling
+        is fine; import-time coupling would break app startup.
+        """
+        submission_id = request.session.pop("pending_promote_submission_id", None)
+        if submission_id is not None:
+            from submissions.services import accept_submission_with_population
+
+            try:
+                sub = accept_submission_with_population(
+                    submission_id=submission_id,
+                    population=obj,
+                    reviewer=request.user,
+                )
+                self.message_user(
+                    request,
+                    _(
+                        "Submission #%(sub)d accepted; population row #%(pop)d created. "
+                        "Submitter has been emailed."
+                    )
+                    % {"sub": sub.pk, "pop": obj.pk},
+                    level=messages.SUCCESS,
+                )
+            except Exception as exc:
+                # Don't roll back the population create — the row is real;
+                # we just couldn't link it back. Operator will need to flip
+                # the submission manually. Surface the error so they know.
+                self.message_user(
+                    request,
+                    _(
+                        "Population created but linkback to submission #%(sub)d failed: "
+                        "%(err)s. Update submission status manually."
+                    )
+                    % {"sub": submission_id, "err": exc},
+                    level=messages.WARNING,
+                )
+        return super().response_add(request, obj, post_url_continue)
+
 
 @admin.register(CoordinatedProgram)
 class CoordinatedProgramAdmin(admin.ModelAdmin):

@@ -1,0 +1,45 @@
+{% extends "email/base.html" %}
+{% load i18n %}
+
+{% block title %}{% if species %}{% blocktranslate with sci_name=species.scientific_name %}Your {{ sci_name }} submission is on the platform{% endblocktranslate %}{% else %}{% blocktranslate %}Your population submission is on the platform{% endblocktranslate %}{% endif %}{% endblock %}
+
+{% block preheader_text %}{% blocktranslate %}Your captive-population data has been accepted into the registry.{% endblocktranslate %}{% endblock %}
+
+{% block body %}
+  <h1 style="margin:0 0 16px; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; font-weight: 600; color:#1f2933; letter-spacing:-0.01em;">
+    {% if species %}{% blocktranslate with sci_name=species.scientific_name %}Your {{ sci_name }} submission is live{% endblocktranslate %}{% else %}{% blocktranslate %}Your submission is live{% endblocktranslate %}{% endif %}
+  </h1>
+
+  <p style="margin:0 0 16px;">
+    {% blocktranslate with name=submission.submitter_user.name %}Hello {{ name }},{% endblocktranslate %}
+  </p>
+
+  <p style="margin:0 0 16px;">
+    {% if species %}{% blocktranslate with sci_name=species.scientific_name %}Your submission for <em>{{ sci_name }}</em> has been accepted and is now part of the platform's captive-population registry.{% endblocktranslate %}{% else %}{% blocktranslate %}Your population submission has been accepted and is now part of the platform's captive-population registry.{% endblocktranslate %}{% endif %}
+  </p>
+
+  <p style="margin:0 0 16px;">
+    {% blocktranslate %}Thanks for contributing. Hobbyist data is a meaningful part of the broader picture of which Madagascar endemic species have captive backups, and coordinators use it to identify pairing opportunities and prioritize cross-keeper transfers.{% endblocktranslate %}
+  </p>
+
+  {% if review_notes %}
+  <div style="margin:0 0 16px; padding: 12px 16px; background:#f1f5f9; border-left: 3px solid #0e7490; border-radius: 4px;">
+    <p style="margin: 0 0 6px; font-size: 13px; color:#475569; font-weight: 600;">
+      {% blocktranslate %}A note from the reviewer{% endblocktranslate %}
+    </p>
+    <p style="margin: 0; font-size: 14px; color:#1f2933; white-space: pre-wrap;">{{ review_notes }}</p>
+  </div>
+  {% endif %}
+
+  {% if species %}
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 8px 0 24px;">
+    <tr>
+      <td bgcolor="#0e7490" style="border-radius: 6px;">
+        <a href="{{ frontend_base_url }}/species/{{ species.id }}/" style="display:inline-block; padding: 12px 22px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; color:#ffffff; background:#0e7490; border-radius: 6px; text-decoration: none;">
+          {% blocktranslate %}View species profile{% endblocktranslate %}
+        </a>
+      </td>
+    </tr>
+  </table>
+  {% endif %}
+{% endblock %}

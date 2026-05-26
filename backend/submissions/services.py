@@ -93,6 +93,59 @@ def reject_submission(
     return submission
 
 
+@transaction.atomic
+def accept_submission_with_population(
+    *,
+    submission_id: int,
+    population,
+    reviewer: User,
+) -> PopulationSubmission:
+    """Finalize a promote: link the population back, flip status, email submitter.
+
+    Called from ``ExSituPopulationAdmin.response_add`` after admin saves
+    the promote form. Idempotent — if the submission is already in a
+    terminal state, returns it unchanged (handles the double-click case
+    where admin saves twice).
+
+    Side effects, in order (all atomic):
+    1. Lock the submission row with ``select_for_update`` (prevents two
+       admins promoting the same submission simultaneously).
+    2. If submitter has no ``User.institution`` yet AND the population
+       attaches to a hobbyist_keeper institution, set
+       ``submitter_user.institution`` to it (AC-15.11 — auto-attach for
+       future submissions per AC-15.12).
+    3. Flip submission status to ``accepted``, set reviewer, set
+       ``accepted_population`` FK.
+    4. Send the localized accept email.
+    """
+    sub = PopulationSubmission.objects.select_for_update().get(pk=submission_id)
+    if sub.is_terminal:
+        return sub
+
+    # AC-15.11: first-accept attaches the user to the new keeper institution
+    # so subsequent submissions from them auto-resolve via
+    # resolve_keeper_institution branch 2 ("existing_keeper").
+    if (
+        sub.submitter_user is not None
+        and sub.submitter_user.institution_id is None
+        and population.institution is not None
+        and population.institution.institution_type == "hobbyist_keeper"
+    ):
+        sub.submitter_user.institution = population.institution
+        sub.submitter_user.save(update_fields=["institution"])
+
+    sub.status = SubmissionStatus.ACCEPTED
+    sub.reviewer = reviewer
+    sub.accepted_population = population
+    sub.save(update_fields=["status", "reviewer", "accepted_population", "updated_at"])
+
+    _send_submitter_email(
+        submission=sub,
+        template="submissions/population_submission_accepted",
+    )
+    return sub
+
+
 def _send_submitter_email(*, submission: PopulationSubmission, template: str) -> None:
     """Notify the submitter in their preferred locale. Best-effort.
 

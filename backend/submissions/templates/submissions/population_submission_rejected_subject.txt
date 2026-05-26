@@ -1,0 +1,1 @@
+{% load i18n %}{% if species %}{% blocktranslate with sci_name=species.scientific_name %}About your {{ sci_name }} submission{% endblocktranslate %}{% else %}{% blocktranslate %}About your population submission{% endblocktranslate %}{% endif %}

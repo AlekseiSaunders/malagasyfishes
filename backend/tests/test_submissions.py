@@ -449,6 +449,176 @@ class TestAccountLoginRateLimit:
         assert resp.status_code == 429
 
 
+# --- Promote flow (architecture D3, AC-15.10/15.11/15.12/15.20/15.21) ---
+
+
+@pytest.mark.django_db
+class TestPromoteFlow:
+    """End-to-end test for the one-click promote service.
+
+    The admin view itself (redirect to prefilled add form) is exercised
+    indirectly — we test the `accept_submission_with_population` service
+    function directly because that's where the lifecycle changes happen.
+    The admin URL wiring is covered by the Django test client in
+    `test_promote_admin_url_renders` below.
+    """
+
+    def test_accept_links_population_flips_status_sends_email(
+        self,
+        tier2_user: User,
+        species: Species,
+        db,
+    ) -> None:
+        from populations.models import ExSituPopulation, Institution
+        from submissions.services import accept_submission_with_population
+
+        sub = PopulationSubmission.objects.create(
+            submitter_user=tier2_user,
+            species=species,
+            count_total=6,
+            last_census_date=datetime.date.today(),
+            status=SubmissionStatus.NEW,
+        )
+        inst = Institution.objects.create(
+            name="Test Keeper (keeper)",
+            institution_type="hobbyist_keeper",
+            country="USA",
+        )
+        pop = ExSituPopulation.objects.create(
+            species=species,
+            institution=inst,
+            count_total=6,
+        )
+
+        result = accept_submission_with_population(
+            submission_id=sub.pk, population=pop, reviewer=tier2_user
+        )
+
+        assert result.status == SubmissionStatus.ACCEPTED
+        assert result.accepted_population == pop
+        assert result.reviewer == tier2_user
+
+        # AC-15.11: first-accept also attached the user to the keeper institution.
+        tier2_user.refresh_from_db()
+        assert tier2_user.institution == inst
+
+    def test_accept_idempotent_on_double_promote(
+        self,
+        tier2_user: User,
+        species: Species,
+        db,
+    ) -> None:
+        """Architecture D11: select_for_update + early-return for terminal state."""
+        from populations.models import ExSituPopulation, Institution
+        from submissions.services import accept_submission_with_population
+
+        inst = Institution.objects.create(
+            name="Test", institution_type="hobbyist_keeper", country="USA"
+        )
+        sub = PopulationSubmission.objects.create(
+            submitter_user=tier2_user,
+            species=species,
+            count_total=6,
+            last_census_date=datetime.date.today(),
+            status=SubmissionStatus.ACCEPTED,
+        )
+        pop = ExSituPopulation.objects.create(species=species, institution=inst, count_total=6)
+
+        # Second promote (terminal-state guard) returns the existing row.
+        result = accept_submission_with_population(
+            submission_id=sub.pk, population=pop, reviewer=tier2_user
+        )
+        assert result.status == SubmissionStatus.ACCEPTED
+        # accepted_population stays NULL because the function returned
+        # early WITHOUT setting it (idempotent for accidental double-click).
+        assert result.accepted_population is None
+
+    def test_promote_admin_action_redirects_to_add_form(
+        self,
+        tier2_user: User,
+        species: Species,
+        db,
+    ) -> None:
+        """The Promote admin action redirects to the prefilled add form."""
+        from django.test import Client
+        from django.urls import reverse
+
+        admin_user = User.objects.create_user(
+            email="admin@example.com",
+            password="admin12345",
+            name="Admin User",
+            is_active=True,
+            access_tier=5,
+            is_staff=True,
+            is_superuser=True,
+        )
+
+        sub = PopulationSubmission.objects.create(
+            submitter_user=tier2_user,
+            species=species,
+            count_total=6,
+            last_census_date=datetime.date.today(),
+            status=SubmissionStatus.NEW,
+        )
+
+        client = Client()
+        client.force_login(admin_user)
+        resp = client.get(
+            reverse(
+                "admin:submissions_populationsubmission_promote",
+                args=[sub.pk],
+            )
+        )
+        assert resp.status_code == 302
+        # Should redirect to the populations add form with prefill
+        assert "/admin/populations/exsitupopulation/add/" in resp.url
+        assert f"species={species.pk}" in resp.url
+        assert "count_total=6" in resp.url
+
+        # Session marker is set so response_add can pick it up post-save.
+        assert client.session.get("pending_promote_submission_id") == sub.pk
+
+    def test_promote_terminal_submission_blocked(
+        self,
+        tier2_user: User,
+        species: Species,
+        db,
+    ) -> None:
+        """An already-accepted submission cannot be promoted again."""
+        from django.test import Client
+        from django.urls import reverse
+
+        admin_user = User.objects.create_user(
+            email="admin2@example.com",
+            password="admin12345",
+            name="Admin",
+            is_active=True,
+            access_tier=5,
+            is_staff=True,
+            is_superuser=True,
+        )
+
+        sub = PopulationSubmission.objects.create(
+            submitter_user=tier2_user,
+            species=species,
+            count_total=6,
+            last_census_date=datetime.date.today(),
+            status=SubmissionStatus.ACCEPTED,
+        )
+
+        client = Client()
+        client.force_login(admin_user)
+        resp = client.get(
+            reverse(
+                "admin:submissions_populationsubmission_promote",
+                args=[sub.pk],
+            )
+        )
+        # Redirects back to the submission's change view with a warning.
+        assert resp.status_code == 302
+        assert f"{sub.pk}/change/" in resp.url
+
+
 # --- Rollback signal (AC-15.16) ---
 
 

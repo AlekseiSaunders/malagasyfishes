@@ -1,0 +1,14 @@
+{% load i18n %}{% blocktranslate with name=submission.submitter_user.name %}Hello {{ name }},{% endblocktranslate %}
+
+{% if species %}{% blocktranslate with sci_name=species.scientific_name %}We weren't able to add your {{ sci_name }} submission to the registry this time.{% endblocktranslate %}{% else %}{% blocktranslate %}We weren't able to add your population submission to the registry this time.{% endblocktranslate %}{% endif %}
+
+{% if review_notes %}{% blocktranslate %}Reason from the reviewer:{% endblocktranslate %}
+
+{{ review_notes }}
+
+{% endif %}{% blocktranslate %}If you'd like to discuss or resubmit with updated information, please reply to this email directly.{% endblocktranslate %}
+
+—
+{{ platform_short_name }}
+{{ frontend_base_url }}
+{{ platform_contact_email }}

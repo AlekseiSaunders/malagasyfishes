@@ -1,0 +1,16 @@
+{% load i18n %}{% blocktranslate with name=submission.submitter_user.name %}Hello {{ name }},{% endblocktranslate %}
+
+{% if species %}{% blocktranslate with sci_name=species.scientific_name %}Your submission for {{ sci_name }} has been accepted and is now part of the platform's captive-population registry.{% endblocktranslate %}{% else %}{% blocktranslate %}Your population submission has been accepted and is now part of the platform's captive-population registry.{% endblocktranslate %}{% endif %}
+
+{% blocktranslate %}Thanks for contributing. Hobbyist data is a meaningful part of the broader picture of which Madagascar endemic species have captive backups, and coordinators use it to identify pairing opportunities and prioritize cross-keeper transfers.{% endblocktranslate %}
+
+{% if review_notes %}{% blocktranslate %}A note from the reviewer:{% endblocktranslate %}
+
+{{ review_notes }}
+
+{% endif %}{% blocktranslate %}If anything in your submission was adjusted before publishing, you can see the final version at the species profile.{% endblocktranslate %}
+
+—
+{{ platform_short_name }}
+{{ frontend_base_url }}
+{{ platform_contact_email }}
