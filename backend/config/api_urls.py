@@ -43,6 +43,8 @@ urlpatterns = [
     path("", include(router.urls)),
     # Husbandry (Gate 08) — nested under /species/{id}/husbandry/
     path("", include("husbandry.urls")),
+    # Curated submissions (Gates 10 + 15) — /contribute/{populations,husbandry}/
+    path("contribute/", include("submissions.urls")),
     # Dashboard
     path("dashboard/", DashboardView.as_view(), name="dashboard"),
     # Coordinator dashboard (Tier 3+) — Gate 3 panels

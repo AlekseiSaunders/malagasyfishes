@@ -12,7 +12,7 @@ extend-exclude = ["*/migrations/*"]
 select = ["E", "F", "W", "I", "N", "UP"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["config", "species", "populations", "fieldwork", "accounts", "integration", "audit", "husbandry", "i18n"]
+known-first-party = ["config", "species", "populations", "fieldwork", "accounts", "integration", "audit", "husbandry", "i18n", "submissions"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -50,6 +50,14 @@ module = [
     "populations.admin",
     "populations.serializers",
     "populations.views",
+    "submissions.admin",
+    "submissions.models",
+    "submissions.serializers",
+    "submissions.services",
+    "submissions.signals",
+    "submissions.views",
+    "submissions.throttles",
+    "submissions.urls",
     "species.admin",
     "species.models",
     "species.serializers",

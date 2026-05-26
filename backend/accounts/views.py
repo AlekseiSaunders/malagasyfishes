@@ -31,31 +31,87 @@ signer = TimestampSigner()
 # Verification tokens valid for 48 hours
 VERIFICATION_MAX_AGE = 48 * 60 * 60
 
-# Rate limiting: 5 failed login attempts per 15-minute window per IP
+# Login rate limiting: 5 failed attempts per 15-minute window per IP.
+# Backstopped by S3 — per-account limit prevents rotating-IP credential
+# stuffing against a single account (see _is_account_rate_limited).
 RATE_LIMIT_MAX_ATTEMPTS = 5
 RATE_LIMIT_WINDOW_SECONDS = 900
 
+# S1: per-IP registration rate limit. Allow 3 successful registrations per
+# IP per hour; the 4th gets blocked. Bulk account creation is the cheapest
+# path to queue exhaustion in the curated-submission flow (Gate 15);
+# tighter than login because account creation is rarer than login attempts.
+# Convention: ``_MAX`` is the count at which the next attempt blocks (the
+# ``>=`` semantics in ``_check_and_record``), so MAX=4 → 3 succeed + 4th
+# blocks. Matches the user-friendly "N per hour" reading.
+REGISTER_RATE_MAX = 4
+REGISTER_RATE_WINDOW_SECONDS = 3600
+
+# S3: per-account login rate limit. Allow 10 failed attempts per hour
+# against any single account, regardless of source IP; the 11th blocks.
+# Blocks credential stuffing that rotates through a botnet to defeat the
+# per-IP limit. Same MAX-N+1 convention as REGISTER_RATE_MAX.
+ACCOUNT_LOGIN_RATE_MAX = 11
+ACCOUNT_LOGIN_RATE_WINDOW_SECONDS = 3600
+
+
+def _hash_for_key(value: str) -> str:
+    """Truncated SHA — 16 hex chars (64 bits) is plenty for cache uniqueness."""
+    return hashlib.sha256(value.encode()).hexdigest()[:16]
+
+
+def _check_and_record(*, key: str, threshold: int, window: int) -> bool:
+    """Generic atomic-incr rate-limit check.
+
+    Returns True if the counter is at or over ``threshold``. The counter
+    increments BEFORE the comparison, so the Nth attempt is blocked when
+    count reaches ``threshold`` (``>=`` not ``>``) — matches the existing
+    login limiter's spec ("5 attempts per window" allows exactly 5 then
+    blocks).
+    """
+    # cache.add only sets if missing — establishes the TTL window on first
+    # hit and lets subsequent hits roll within that window.
+    cache.add(key, 0, timeout=window)
+    return cache.incr(key) >= threshold
+
 
 def _get_rate_limit_key(ip: str) -> str:
-    # Truncated to 16 hex chars (64 bits) — sufficient for cache key uniqueness
-    hashed = hashlib.sha256(ip.encode()).hexdigest()[:16]
-    return f"login_rate:{hashed}"
+    """Legacy alias kept for back-compat with login_rate cache keys."""
+    return f"login_rate:{_hash_for_key(ip)}"
 
 
 def _check_and_record_rate_limit(ip: str) -> bool:
-    """Atomically check and increment the login attempt counter.
+    """Legacy login per-IP rate limit. Preserved for the login flow."""
+    return _check_and_record(
+        key=_get_rate_limit_key(ip),
+        threshold=RATE_LIMIT_MAX_ATTEMPTS,
+        window=RATE_LIMIT_WINDOW_SECONDS,
+    )
 
-    Returns True if the IP is rate-limited (at or over the threshold). The
-    counter increments BEFORE the comparison, so the Nth attempt is
-    blocked when count reaches RATE_LIMIT_MAX_ATTEMPTS — `>=` not `>`.
-    Anything looser would mean the spec ("5 failed attempts per window")
-    silently allows 6.
+
+def _is_register_rate_limited(ip: str) -> bool:
+    """S1 — 3 registrations per IP per hour."""
+    return _check_and_record(
+        key=f"register_rate_ip:{_hash_for_key(ip)}",
+        threshold=REGISTER_RATE_MAX,
+        window=REGISTER_RATE_WINDOW_SECONDS,
+    )
+
+
+def _is_account_login_rate_limited(email: str) -> bool:
+    """S3 — 10 failed login attempts per account per hour.
+
+    Keyed on a hash of the lowercased email, so account enumeration via
+    timing is no easier than it was before (login already returns the
+    same 401 for missing-account and wrong-password). Only failures
+    advance the counter — the login view checks this BEFORE attempting
+    auth, then increments AFTER on auth failure.
     """
-    key = _get_rate_limit_key(ip)
-    # cache.add only sets if key is missing, establishing the TTL window
-    cache.add(key, 0, timeout=RATE_LIMIT_WINDOW_SECONDS)
-    count = cache.incr(key)
-    return count >= RATE_LIMIT_MAX_ATTEMPTS
+    return _check_and_record(
+        key=f"login_rate_account:{_hash_for_key(email.lower())}",
+        threshold=ACCOUNT_LOGIN_RATE_MAX,
+        window=ACCOUNT_LOGIN_RATE_WINDOW_SECONDS,
+    )
 
 
 def _get_client_ip(request: Request) -> str:
@@ -120,6 +176,16 @@ def _notify_managers_of_signup(
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def register(request: Request) -> Response:
+    # S1: per-IP registration rate limit. Bulk account creation is the
+    # cheapest path to overwhelming the Gate 15 / Gate 10 review queue;
+    # 3/hour per IP caps that without affecting legitimate signups.
+    ip = _get_client_ip(request)
+    if _is_register_rate_limited(ip):
+        return Response(
+            {"detail": _("Too many registration attempts. Try again in an hour.")},
+            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
     serializer = RegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
@@ -237,6 +303,17 @@ def login(request: Request) -> Response:
     serializer.is_valid(raise_exception=True)
 
     data = serializer.validated_data
+
+    # S3: per-account rate limit, on TOP of the per-IP limit above. This
+    # catches credential-stuffing that rotates through IPs to defeat the
+    # per-IP cap. Check BEFORE authenticating — a successful auth with
+    # the 11th attempt still tells the attacker the password works.
+    if _is_account_login_rate_limited(data["email"]):
+        return Response(
+            {"detail": _("Too many login attempts for this account. Try again in an hour.")},
+            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
     user = authenticate(request, email=data["email"], password=data["password"])
 
     if user is None:

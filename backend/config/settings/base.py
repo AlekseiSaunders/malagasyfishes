@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "audit",
     "husbandry",
     "i18n",
+    "submissions",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -200,6 +201,13 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ],
+    # Gate 15 / Gate 10: shared throttle scope across both submission
+    # types so a user can't bypass the limit by alternating endpoints.
+    # The daily cap (20/user/day) is enforced separately in the view via
+    # cache.incr because DRF doesn't compose two rates on one throttle.
+    "DEFAULT_THROTTLE_RATES": {
+        "submissions_create": "10/hour",
+    },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
@@ -234,6 +242,14 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
+
+# Gate 15 / Gate 10: server-side feature flags for the contribute endpoints.
+# The Next.js NEXT_PUBLIC_FEATURE_CONTRIBUTE_* flags only gate the UI route;
+# these gate the API. Default False — flip on per environment via env var
+# once the feature is ready to soft-launch. Returning 404 (not 403) keeps
+# the endpoint invisible when off.
+CONTRIBUTE_POPULATION_ENABLED = env.bool("CONTRIBUTE_POPULATION_ENABLED", default=False)
+CONTRIBUTE_HUSBANDRY_ENABLED = env.bool("CONTRIBUTE_HUSBANDRY_ENABLED", default=False)
 
 # Platform-manager alerts (new signups, etc.). Used by Django's mail_managers().
 # Override via DJANGO_MANAGERS="a@example.com,b@example.com". Empty disables.

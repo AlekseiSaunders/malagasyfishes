@@ -113,6 +113,24 @@ class ExSituPopulationWriteSerializer(serializers.ModelSerializer):
     # writer.
     notes = serializers.CharField(max_length=10_000, allow_blank=True, required=False)
 
+    # S2 (security review 2026-05-26): the model has IntegerField with no
+    # validators, which means a Tier 2 institutional editor can submit
+    # count_total = 999_999_999 and corrupt the aggregates. Cap at the
+    # serializer layer — 100,000 is generous enough for any single
+    # institutional population while blocking obvious typos / abuse.
+    count_total = serializers.IntegerField(
+        min_value=0, max_value=100_000, required=False, allow_null=True
+    )
+    count_male = serializers.IntegerField(
+        min_value=0, max_value=100_000, required=False, allow_null=True
+    )
+    count_female = serializers.IntegerField(
+        min_value=0, max_value=100_000, required=False, allow_null=True
+    )
+    count_unsexed = serializers.IntegerField(
+        min_value=0, max_value=100_000, required=False, allow_null=True
+    )
+
     class Meta:
         model = ExSituPopulation
         fields = [
