@@ -709,7 +709,37 @@ Listing these so you know they're not on your plate.
 
 ## 6. Contribute flow — Gate 10 + Gate 15 (planning locked 2026-05-26)
 
-**Status:** Planning fully locked. Agent review pass complete (BA + architecture + security). All four open questions resolved with Aleksei 2026-05-26. Ready to implement on `gate/15-population-submission-form`.
+**Status (2026-05-26):** Gate 15 implementation FEATURE-COMPLETE on `main`. Five PRs merged (#201 Day 2 backend, #202 Day 5 promote + emails, #203 Day 4 frontend, #204 Day 6 dashboard Q1 split, #205 adversarial tests + bug fixes). Security-reviewer gate-close pass returned GREEN (see `docs/planning/security/contribute-submissions-gate-close-review.md`). Conservation-writer copy polish applied.
+
+**What ships on the branch:**
+- Authenticated Tier 2+ `POST /api/v1/contribute/populations/` endpoint
+- `/contribute/population/` form + `/thanks/` confirmation page
+- Django admin triage queue + one-click "Promote to ExSituPopulation"
+- First-accept auto-creates `hobbyist_keeper` Institution (AC-15.11)
+- Manager-notification email on every signup + every submission
+- Submitter accept/reject emails (localized via `send_translated_email`)
+- Public dashboard split into three tiles: Captive Coverage (breeding-required filter), Institutional Contributors, Verified Keeper Network
+- Four pre-existing security gaps closed (S1 register rate limit, S2 count validators, S3 per-account login limit, S4 notes cap)
+- 60+ tests covering happy path + 10 must-have security controls + edge cases
+
+**Default-off in production via two flags:**
+- Django: `CONTRIBUTE_POPULATION_ENABLED=false`
+- Next.js: `NEXT_PUBLIC_FEATURE_CONTRIBUTE_POPULATION=false`
+- Middleware redirects home, API returns 404 — endpoint invisible until flipped.
+
+### 6.A Remaining pre-launch checklist — YOUR ACTIONS
+
+Before flipping the feature flag in production:
+
+1. **Confirm `REDIS_URL` is set** in the staging + prod env files. Without Redis, rate-limit counters fall back to in-process LocMemCache and the limits don't work across gunicorn workers. Security reviewer flagged this.
+2. **Confirm `MANAGERS` / `DJANGO_MANAGERS` env var** points at your gmail. Without it, the orphan-notification + manager-notification emails are silent.
+3. **Flip BOTH flags simultaneously** when ready: `CONTRIBUTE_POPULATION_ENABLED=true` on Hetzner + `NEXT_PUBLIC_FEATURE_CONTRIBUTE_POPULATION=true` on Vercel. Flipping one without the other leaves you with either a working API + no UI, or a UI that 404s the API.
+4. **Smoke test on staging first.** Sign up a throwaway Tier 2 account, submit a population, verify the manager email lands in your gmail, log in as admin, click Promote, verify the submitter gets the accept email.
+5. **Soft-launch window: post-ABQ.** Per the locked Day-6 plan, do NOT flip during workshop week. Demo Gate 13 (institutional-keeper-edits-own-data) instead; mention Gate 15 as "shipping next week." Form bugs at 10:32am Tuesday in front of zoo curators is the failure mode this defers around.
+
+### 6.B Gate 10 status
+
+Gate 10 (husbandry tip submission, reopened 2026-05-26 with auth flipped to Tier 2+) was the Day-3 cut candidate per the spec. Day 3's 6-box checkpoint passed cleanly, so the shared `submissions` Django app + `HusbandryContribution` model are on `main` — they ship in the same migration as `PopulationSubmission`. **What's NOT yet wired for Gate 10:** the frontend form at `/contribute/husbandry/` is still the existing mailto stub. A one-day frontend-only PR after ABQ flips it to a real form using the same patterns as Gate 15. Target: 2026-06-09.
 
 **Background:** New Tier 2 signups have been arriving with no contribute path
 beyond the mailto stub at `/contribute/husbandry`. Self-serve was considered
