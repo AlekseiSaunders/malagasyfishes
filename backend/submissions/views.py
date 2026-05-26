@@ -107,6 +107,11 @@ class _BaseSubmissionCreateView(CreateAPIView):
         # Honeypot — silent-spam path (security must-have #6).
         # Return 201 so the bot sees success and doesn't probe further;
         # the row gets status='spam' and no manager email fires.
+        # Any non-empty value trips the trap, including whitespace —
+        # the serializer's ``trim_whitespace=False`` preserves the raw
+        # value so this check sees what the bot actually sent. The only
+        # value that should pass through as legitimate is genuine
+        # absence (field not in POST, or explicit empty string).
         honeypot = serializer.validated_data.pop("website", "")
         if honeypot:
             instance = serializer.save(

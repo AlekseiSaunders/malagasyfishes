@@ -62,10 +62,14 @@ class PopulationSubmissionCreateSerializer(serializers.ModelSerializer):
     # Honeypot — must be absent or blank. Bot fills, real form leaves empty.
     # The viewset sees this and routes to the silent-spam path. Naming it
     # ``website`` because that's the most common spam-bot autofill target.
+    # ``trim_whitespace=False`` is load-bearing: DRF's default whitespace
+    # stripping turns `"   "` into `""` BEFORE the view sees it, defeating
+    # the honeypot for bots that fill the field with whitespace.
     website = serializers.CharField(
         required=False,
         allow_blank=True,
         write_only=True,
+        trim_whitespace=False,
         help_text=_("Honeypot. Leave blank."),
     )
 
@@ -159,6 +163,7 @@ class HusbandryContributionCreateSerializer(serializers.ModelSerializer):
         required=False,
         allow_blank=True,
         write_only=True,
+        trim_whitespace=False,
         help_text=_("Honeypot. Leave blank."),
     )
 

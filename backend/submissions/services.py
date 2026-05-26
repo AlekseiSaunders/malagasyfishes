@@ -158,8 +158,11 @@ def _send_submitter_email(*, submission: PopulationSubmission, template: str) ->
 
     if submission.submitter_user is None:
         # AC-15.17 — orphaned submission (user deleted between submit and
-        # review): skip the submitter email and let the reviewer notice via
-        # the admin form's "deleted user" marker.
+        # review): skip the submitter email AND fire a manager-notification
+        # so Aleksei knows the orphan exists. Without this signal the
+        # status transition is silent for both the (deleted) submitter
+        # and the platform operator.
+        _notify_managers_of_orphaned_submission(submission=submission)
         return
 
     try:
@@ -177,3 +180,31 @@ def _send_submitter_email(*, submission: PopulationSubmission, template: str) ->
         # send_translated_email is supposed to honor fail_silently, but
         # template-not-found etc. can still raise. Don't propagate.
         pass
+
+
+def _notify_managers_of_orphaned_submission(*, submission: PopulationSubmission) -> None:
+    """AC-15.17 — let the platform operator know a status transition just
+    happened on a submission whose submitter is gone.
+
+    Best-effort, no-op when MANAGERS isn't configured.
+    """
+    from django.conf import settings
+    from django.core.mail import mail_managers
+
+    if not getattr(settings, "MANAGERS", None):
+        return
+
+    species_label = submission.species.scientific_name if submission.species else "(no species)"
+    mail_managers(
+        subject=f"Orphaned submission #{submission.pk} transitioned to {submission.status}",
+        message=(
+            f"PopulationSubmission #{submission.pk} just transitioned to "
+            f"{submission.status}, but the submitter user has been deleted.\n\n"
+            f"Species: {species_label}\n"
+            f"Reviewer: {submission.reviewer}\n"
+            f"Review notes: {submission.review_notes or '(none)'}\n\n"
+            f"No submitter notification was sent. Admin row: "
+            f"/admin/submissions/populationsubmission/{submission.pk}/change/\n"
+        ),
+        fail_silently=True,
+    )
