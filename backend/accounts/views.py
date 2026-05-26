@@ -5,6 +5,7 @@ import hashlib
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.core.cache import cache
+from django.core.mail import mail_managers
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.http import Http404
 from django.utils.translation import gettext_lazy as _
@@ -74,6 +75,48 @@ def _get_client_ip(request: Request) -> str:
     return request.META.get("REMOTE_ADDR", "0.0.0.0")
 
 
+def _notify_managers_of_signup(
+    *,
+    user: User,
+    institution: Institution | None,
+    requested_institution_id: int | None,
+) -> None:
+    """Plain-text alert to settings.MANAGERS so a human can assign tier / approve claim.
+
+    Best-effort: fail_silently=True. A mail outage must not block signup,
+    which is the same contract the verification email observes.
+    """
+    if not getattr(settings, "MANAGERS", None):
+        return
+
+    if institution is not None:
+        claim_line = (
+            f"Institution claim (PENDING review): {institution.name} (id={institution.pk})\n"
+            f"Review claims: /admin/accounts/pendinginstitutionclaim/\n"
+        )
+    elif requested_institution_id:
+        claim_line = (
+            f"User requested institution_id={requested_institution_id} but it was not found.\n"
+        )
+    else:
+        claim_line = "No institution requested.\n"
+
+    mail_managers(
+        subject=f"New signup: {user.name} <{user.email}>",
+        message=(
+            f"A new user just registered on the platform.\n\n"
+            f"Name:   {user.name}\n"
+            f"Email:  {user.email}\n"
+            f"Locale: {user.locale}\n"
+            f"Tier:   {user.access_tier} (default Researcher)\n"
+            f"Active: {user.is_active} (flips True on email verification)\n\n"
+            f"{claim_line}\n"
+            f"Edit user / change tier: /admin/accounts/user/{user.pk}/change/\n"
+        ),
+        fail_silently=True,
+    )
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def register(request: Request) -> Response:
@@ -98,6 +141,7 @@ def register(request: Request) -> Response:
     # direct User.institution write. The claim is reviewed by a coordinator
     # in Django admin before edit access is granted. (Architecture §3.4.)
     institution_id = data.get("institution_id")
+    institution: Institution | None = None
     if institution_id:
         try:
             institution = Institution.objects.get(pk=institution_id)
@@ -124,6 +168,12 @@ def register(request: Request) -> Response:
         template="accounts/verify_email",
         context={"verification_url": verification_url, "user": user},
         fail_silently=True,
+    )
+
+    _notify_managers_of_signup(
+        user=user,
+        institution=institution,
+        requested_institution_id=institution_id,
     )
 
     return Response(

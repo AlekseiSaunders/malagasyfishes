@@ -235,6 +235,12 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
 
+# Platform-manager alerts (new signups, etc.). Used by Django's mail_managers().
+# Override via DJANGO_MANAGERS="a@example.com,b@example.com". Empty disables.
+_manager_emails = env.list("DJANGO_MANAGERS", default=["alekseisaunders@gmail.com"])
+MANAGERS = [(email.split("@")[0], email) for email in _manager_emails if email]
+EMAIL_SUBJECT_PREFIX = env("EMAIL_SUBJECT_PREFIX", default="[MFFCP] ")
+
 # Auth
 AUTHENTICATION_BACKENDS = ["accounts.backends.EmailBackend"]
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:3000")

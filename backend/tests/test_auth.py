@@ -97,8 +97,68 @@ class TestRegister:
                 "password": "securepass12345",
             },
         )
-        assert len(mail.outbox) == 1
-        assert "verify" in mail.outbox[0].subject.lower()
+        # One verification email to the new user, plus a manager-notification
+        # email to settings.MANAGERS (asserted in test_register_notifies_managers).
+        verify_emails = [m for m in mail.outbox if "verify@example.com" in m.to]
+        assert len(verify_emails) == 1
+        assert "verify" in verify_emails[0].subject.lower()
+
+    def test_register_notifies_managers(self, api_client: APIClient, settings) -> None:
+        settings.MANAGERS = [("Aleksei", "alekseisaunders@gmail.com")]
+        api_client.post(
+            "/api/v1/auth/register/",
+            {
+                "email": "newbie@example.com",
+                "name": "New Bie",
+                "password": "securepass12345",
+            },
+        )
+        manager_emails = [m for m in mail.outbox if "alekseisaunders@gmail.com" in m.to]
+        assert len(manager_emails) == 1
+        msg = manager_emails[0]
+        assert "New signup" in msg.subject
+        assert "newbie@example.com" in msg.body
+        assert "New Bie" in msg.body
+        assert "No institution requested" in msg.body
+        assert "/admin/accounts/user/" in msg.body
+
+    def test_register_manager_notification_disabled_when_managers_empty(
+        self, api_client: APIClient, settings
+    ) -> None:
+        settings.MANAGERS = []
+        api_client.post(
+            "/api/v1/auth/register/",
+            {
+                "email": "silent@example.com",
+                "name": "Silent Signup",
+                "password": "securepass12345",
+            },
+        )
+        # Only the verification email should be sent; no manager alert.
+        assert all("alekseisaunders@gmail.com" not in m.to for m in mail.outbox)
+
+    def test_register_with_institution_notification_includes_claim(
+        self, api_client: APIClient, settings
+    ) -> None:
+        settings.MANAGERS = [("Aleksei", "alekseisaunders@gmail.com")]
+        inst = Institution.objects.create(
+            name="ABQ BioPark", institution_type="zoo", country="United States"
+        )
+        api_client.post(
+            "/api/v1/auth/register/",
+            {
+                "email": "abq@example.com",
+                "name": "ABQ Staff",
+                "password": "securepass12345",
+                "institution_id": inst.pk,
+            },
+        )
+        manager_emails = [m for m in mail.outbox if "alekseisaunders@gmail.com" in m.to]
+        assert len(manager_emails) == 1
+        body = manager_emails[0].body
+        assert "ABQ BioPark" in body
+        assert "PENDING" in body
+        assert "/admin/accounts/pendinginstitutionclaim/" in body
 
     def test_register_duplicate_email(self, api_client: APIClient, active_user: User) -> None:
         resp = api_client.post(
