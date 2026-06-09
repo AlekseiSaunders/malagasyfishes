@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 
-const REPO_URL = "https://github.com/alexsaunderswps/madagascarfish";
+const REPO_URL = "https://github.com/AlekseiSaunders/malagasyfishes";
 
 type FooterLink = {
   /** i18n key relative to footer.<columnLinks> */

@@ -83,8 +83,8 @@ ssh deploy@$SERVER_IP
 ## 4. Clone and configure
 
 ```bash
-git clone https://github.com/alexsaunderswps/madagascarfish.git
-cd madagascarfish/deploy/staging
+git clone https://github.com/AlekseiSaunders/malagasyfishes.git
+cd malagasyfishes/deploy/staging
 cp .env.example .env
 ```
 
