@@ -67,7 +67,7 @@ test("About page renders owner and GitHub link", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByText(/Aleksei Saunders/)).toBeVisible();
   await expect(
-    page.getByRole("link", { name: /github\.com\/alexsaunderswps\/madagascarfish/i }),
+    page.getByRole("link", { name: /github\.com\/AlekseiSaunders\/malagasyfishes/i }),
   ).toBeVisible();
 });
 

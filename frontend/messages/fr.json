@@ -465,7 +465,7 @@
       "provenancePara3": "Les définitions des catégories de l'UICN, de CARES, de Darwin Core et des autres termes utilisés sur le site sont rassemblées dans le <glossaryLink>glossaire</glossaryLink>.",
       "stewardshipEyebrow": "Gestion",
       "stewardshipTitle": "Gouvernance",
-      "stewardshipBody": "Maintenue par Aleksei Saunders (Wildlife Protection Solutions). La gestion à long terme fait l'objet de discussions avec des organisations partenaires. Code source : <repoLink>github.com/alexsaunderswps/madagascarfish</repoLink>. Sous licence Apache-2.0.",
+      "stewardshipBody": "Maintenue par Aleksei Saunders. La gestion à long terme fait l'objet de discussions avec des organisations partenaires. Code source : <repoLink>github.com/AlekseiSaunders/malagasyfishes</repoLink>. Sous licence Apache-2.0.",
       "referencesEyebrow": "Références",
       "referencesTitle": "Citations",
       "citation1Prefix": "Leiss L, Rauhaus A, Rakotoarison A, Fusari C, Vences M, Ziegler T. Review of threatened Malagasy freshwater fishes in zoos and aquaria: The necessity of an ex situ conservation network — A call for action. ",

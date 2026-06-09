@@ -23,7 +23,7 @@ export async function generateMetadata({
 
 export const revalidate = 3600;
 
-const REPO_URL = "https://github.com/alexsaunderswps/madagascarfish";
+const REPO_URL = "https://github.com/AlekseiSaunders/malagasyfishes";
 const ADMIN_URL = "https://api.malagasyfishes.org/admin/";
 
 const EYEBROW_STYLE: CSSProperties = {
